@@ -83,23 +83,30 @@ define('parsley/validator', [
     },
 
     getErrorMessage: function (constraint, fieldInstance ) {
+      var error_parameters = {};
       var message = this.catalog[this.locale].defaultMessage;
 
-      // Generate some default error parameters based on the attributes
-      var error_parameters = ParsleyUtils.attr(fieldInstance.$element, fieldInstance.options.namespace);
+      // Generate some default error parameters based on field instance attributes
+      if ( typeof fieldInstance != "undefined" ) {
+        error_parameters = ParsleyUtils.attr(fieldInstance.$element, fieldInstance.options.namespace);
+      }
       
       if ( 'undefined' == typeof error_parameters.label ) {
         error_parameters.label = this.catalog[this.locale].defaultLabel;
       }
 
-
       // Type constraints are a bit different, we have to match their requirements too to find right error message
-      if ('type' === constraint.name) {
+      if ('type' === constraint.name) 
         message = this.catalog[this.locale][constraint.name][constraint.requirements];
-      }
       else {
+        if ( typeof this.catalog[this.locale][constraint.name] == "undefined" ) {
+          console.log(this.catalog);
+          console.log(this.locale);
+          console.log(constraint.name);
+        }
         message = this.formatMessage(this.catalog[this.locale][constraint.name], constraint.requirements);
       }
+
 
       message = this.formatMessage(message, error_parameters);
 
@@ -108,10 +115,15 @@ define('parsley/validator', [
 
     // Kind of light `sprintf()` implementation
     formatMessage: function (string, parameters) {
-
+      if ( typeof string == "undefined" ) {
+        console.log(parameters);
+      }
       // Add moustache style templating {{field.label}} = parameters.field_name
       string = string.replace(/{{([a-zA-Z0-9_-]+)}}/gi, function(a,b){
-        return parameters[b];
+        if ( typeof parameters[b] != "undefined" )
+          return parameters[b];
+        else
+          return a;
       });
 
       if ('object' === typeof parameters) {
