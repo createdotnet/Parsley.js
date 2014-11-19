@@ -1,7 +1,7 @@
 /*!
 * Parsleyjs
 * Guillaume Potier - <guillaume@wisembly.com>
-* Version 2.0.5 - built Wed Oct 15 2014 10:16:06
+* Version 2.0.5 - built Wed Nov 19 2014 16:44:57
 * MIT Licensed
 *
 */
@@ -197,7 +197,7 @@
 /*!
 * validator.js
 * Guillaume Potier - <guillaume@wisembly.com>
-* Version 1.0.0 - built Sun Aug 03 2014 17:42:31
+* Version 1.0.1 - built Mon Aug 25 2014 16:10:10
 * MIT Licensed
 *
 */
@@ -208,7 +208,7 @@ var Validator = ( function ( ) {
   */
   var Validator = function ( options ) {
     this.__class__ = 'Validator';
-    this.__version__ = '1.0.0';
+    this.__version__ = '1.0.1';
     this.options = options || {};
     this.bindingKey = this.options.bindingKey || '_validatorjsConstraint';
   };
@@ -553,7 +553,7 @@ var Validator = ( function ( ) {
       this.validate = function ( collection, group ) {
         var result, validator = new Validator(), count = 0, failures = {}, groups = this.groups.length ? this.groups : group;
         if ( !_isArray( collection ) )
-          throw new Violation( this, array, { value: Validator.errorCode.must_be_an_array } );
+          throw new Violation( this, collection, { value: Validator.errorCode.must_be_an_array } );
         for ( var i = 0; i < collection.length; i++ ) {
           result = this.constraint ?
             validator.validate( collection[ i ], this.constraint, groups ) :
@@ -922,17 +922,31 @@ var Validator = ( function ( ) {
       delete this.validators[name];
       return this;
     },
-    getErrorMessage: function (constraint) {
-      var message;
+    getErrorMessage: function (constraint, fieldInstance ) {
+      var message = this.catalog[this.locale].defaultMessage;
+      // Generate some default error parameters based on the attributes
+      var error_parameters = ParsleyUtils.attr(fieldInstance.$element, fieldInstance.options.namespace);
+      
+      if ( 'undefined' == typeof error_parameters.label ) {
+        error_parameters.label = this.catalog[this.locale].defaultLabel;
+      }
+
       // Type constraints are a bit different, we have to match their requirements too to find right error message
-      if ('type' === constraint.name)
+      if ('type' === constraint.name) {
         message = this.catalog[this.locale][constraint.name][constraint.requirements];
-      else
+      }
+      else {
         message = this.formatMessage(this.catalog[this.locale][constraint.name], constraint.requirements);
-      return '' !== message ? message : this.catalog[this.locale].defaultMessage;
+      }
+      message = this.formatMessage(message, error_parameters);
+      return message;
     },
     // Kind of light `sprintf()` implementation
     formatMessage: function (string, parameters) {
+      // Add moustache style templating {{field.label}} = parameters.field_name
+      string = string.replace(/{{([a-zA-Z0-9_-]+)}}/gi, function(a,b){
+        return parameters[b];
+      });
       if ('object' === typeof parameters) {
         for (var i in parameters)
           string = this.formatMessage(string, parameters[i]);
@@ -1187,7 +1201,7 @@ var Validator = ( function ( ) {
       var customConstraintErrorMessage = constraint.name + 'Message';
       if ('undefined' !== typeof fieldInstance.options[customConstraintErrorMessage])
         return window.ParsleyValidator.formatMessage(fieldInstance.options[customConstraintErrorMessage], constraint.requirements);
-      return window.ParsleyValidator.getErrorMessage(constraint);
+      return window.ParsleyValidator.getErrorMessage(constraint, fieldInstance);
     },
     _diff: function (newResult, oldResult, deep) {
       var
@@ -1837,9 +1851,10 @@ window.ParsleyConfig = window.ParsleyConfig || {};
 window.ParsleyConfig.i18n = window.ParsleyConfig.i18n || {};
 // Define then the messages
 window.ParsleyConfig.i18n.en = $.extend(window.ParsleyConfig.i18n.en || {}, {
+  defaultLabel:   "This value",
   defaultMessage: "This value seems to be invalid.",
   type: {
-    email:        "This value should be a valid email.",
+    email:        "{{label}} should be a valid email.",
     url:          "This value should be a valid url.",
     number:       "This value should be a valid number.",
     integer:      "This value should be a valid integer.",

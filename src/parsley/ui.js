@@ -172,7 +172,7 @@ define('parsley/ui', [
       if ('undefined' !== typeof fieldInstance.options[customConstraintErrorMessage])
         return window.ParsleyValidator.formatMessage(fieldInstance.options[customConstraintErrorMessage], constraint.requirements);
 
-      return window.ParsleyValidator.getErrorMessage(constraint);
+      return window.ParsleyValidator.getErrorMessage(constraint, fieldInstance);
     },
 
     _diff: function (newResult, oldResult, deep) {
