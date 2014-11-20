@@ -83,8 +83,7 @@ define('parsley/validator', [
     },
 
     getErrorMessage: function (constraint, fieldInstance ) {
-      var error_parameters = {};
-      var message = this.catalog[this.locale].defaultMessage;
+      var error_parameters = {}, message;
 
       // Generate some default error parameters based on field instance attributes
       if ( typeof fieldInstance != "undefined" ) {
@@ -98,26 +97,22 @@ define('parsley/validator', [
       // Type constraints are a bit different, we have to match their requirements too to find right error message
       if ('type' === constraint.name) 
         message = this.catalog[this.locale][constraint.name][constraint.requirements];
-      else {
-        if ( typeof this.catalog[this.locale][constraint.name] == "undefined" ) {
-          console.log(this.catalog);
-          console.log(this.locale);
-          console.log(constraint.name);
-        }
+      else 
         message = this.formatMessage(this.catalog[this.locale][constraint.name], constraint.requirements);
-      }
 
-
-      message = this.formatMessage(message, error_parameters);
-
-      return message;
+      message = ('' !== message ? message : this.catalog[this.locale].defaultMessage);
+    
+      return this.formatMessage(message, error_parameters);
     },
 
     // Kind of light `sprintf()` implementation
     formatMessage: function (string, parameters) {
-      if ( typeof string == "undefined" ) {
-        console.log(parameters);
+
+      // If there's no message just return blank
+      if ( typeof string != "string" || !string) {
+        return '';
       }
+
       // Add moustache style templating {{field.label}} = parameters.field_name
       string = string.replace(/{{([a-zA-Z0-9_-]+)}}/gi, function(a,b){
         if ( typeof parameters[b] != "undefined" )

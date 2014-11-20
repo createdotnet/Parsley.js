@@ -1,7 +1,7 @@
 /*!
 * Parsleyjs
 * Guillaume Potier - <guillaume@wisembly.com>
-* Version 2.0.5 - built Wed Nov 19 2014 16:44:57
+* Version 2.0.5 - built Thu Nov 20 2014 11:56:33
 * MIT Licensed
 *
 */
@@ -923,29 +923,35 @@ var Validator = ( function ( ) {
       return this;
     },
     getErrorMessage: function (constraint, fieldInstance ) {
-      var message = this.catalog[this.locale].defaultMessage;
-      // Generate some default error parameters based on the attributes
-      var error_parameters = ParsleyUtils.attr(fieldInstance.$element, fieldInstance.options.namespace);
+      var error_parameters = {}, message;
+      // Generate some default error parameters based on field instance attributes
+      if ( typeof fieldInstance != "undefined" ) {
+        error_parameters = ParsleyUtils.attr(fieldInstance.$element, fieldInstance.options.namespace);
+      }
       
       if ( 'undefined' == typeof error_parameters.label ) {
         error_parameters.label = this.catalog[this.locale].defaultLabel;
       }
-
       // Type constraints are a bit different, we have to match their requirements too to find right error message
-      if ('type' === constraint.name) {
+      if ('type' === constraint.name) 
         message = this.catalog[this.locale][constraint.name][constraint.requirements];
-      }
-      else {
+      else 
         message = this.formatMessage(this.catalog[this.locale][constraint.name], constraint.requirements);
-      }
-      message = this.formatMessage(message, error_parameters);
-      return message;
+      message = ('' !== message ? message : this.catalog[this.locale].defaultMessage);
+    
+      return this.formatMessage(message, error_parameters);
     },
     // Kind of light `sprintf()` implementation
     formatMessage: function (string, parameters) {
+      if ( typeof string != "string" || !string) {
+        return '';
+      }
       // Add moustache style templating {{field.label}} = parameters.field_name
       string = string.replace(/{{([a-zA-Z0-9_-]+)}}/gi, function(a,b){
-        return parameters[b];
+        if ( typeof parameters[b] != "undefined" )
+          return parameters[b];
+        else
+          return a;
       });
       if ('object' === typeof parameters) {
         for (var i in parameters)
@@ -1852,28 +1858,28 @@ window.ParsleyConfig.i18n = window.ParsleyConfig.i18n || {};
 // Define then the messages
 window.ParsleyConfig.i18n.en = $.extend(window.ParsleyConfig.i18n.en || {}, {
   defaultLabel:   "This value",
-  defaultMessage: "This value seems to be invalid.",
+  defaultMessage: "{{label}} seems to be invalid.",
   type: {
     email:        "{{label}} should be a valid email.",
-    url:          "This value should be a valid url.",
-    number:       "This value should be a valid number.",
-    integer:      "This value should be a valid integer.",
-    digits:       "This value should be digits.",
-    alphanum:     "This value should be alphanumeric."
+    url:          "{{label}} should be a valid url.",
+    number:       "{{label}} should be a valid number.",
+    integer:      "{{label}} should be a valid integer.",
+    digits:       "{{label}} should be digits.",
+    alphanum:     "{{label}} should be alphanumeric."
   },
-  notblank:       "This value should not be blank.",
-  required:       "This value is required.",
-  pattern:        "This value seems to be invalid.",
-  min:            "This value should be greater than or equal to %s.",
-  max:            "This value should be lower than or equal to %s.",
-  range:          "This value should be between %s and %s.",
-  minlength:      "This value is too short. It should have %s characters or more.",
-  maxlength:      "This value is too long. It should have %s characters or fewer.",
-  length:         "This value length is invalid. It should be between %s and %s characters long.",
+  notblank:       "{{label}} should not be blank.",
+  required:       "{{label}} is required.",
+  pattern:        "{{label}} seems to be invalid.",
+  min:            "{{label}} should be greater than or equal to %s.",
+  max:            "{{label}} should be lower than or equal to %s.",
+  range:          "{{label}} should be between %s and %s.",
+  minlength:      "{{label}} is too short. It should have %s characters or more.",
+  maxlength:      "{{label}} is too long. It should have %s characters or fewer.",
+  length:         "{{label}} length is invalid. It should be between %s and %s characters long.",
   mincheck:       "You must select at least %s choices.",
   maxcheck:       "You must select %s choices or fewer.",
   check:          "You must select between %s and %s choices.",
-  equalto:        "This value should be the same."
+  equalto:        "{{label}} should be the same."
 });
 // If file is loaded after Parsley main file, auto-load locale
 if ('undefined' !== typeof window.ParsleyValidator)
