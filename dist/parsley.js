@@ -1,7 +1,7 @@
 /*!
 * Parsleyjs
 * Guillaume Potier - <guillaume@wisembly.com>
-* Version 2.0.5 - built Wed Oct 15 2014 10:16:06
+* Version 2.0.5 - built Thu Nov 20 2014 11:56:33
 * MIT Licensed
 *
 */
@@ -197,7 +197,7 @@
 /*!
 * validator.js
 * Guillaume Potier - <guillaume@wisembly.com>
-* Version 1.0.0 - built Sun Aug 03 2014 17:42:31
+* Version 1.0.1 - built Mon Aug 25 2014 16:10:10
 * MIT Licensed
 *
 */
@@ -208,7 +208,7 @@ var Validator = ( function ( ) {
   */
   var Validator = function ( options ) {
     this.__class__ = 'Validator';
-    this.__version__ = '1.0.0';
+    this.__version__ = '1.0.1';
     this.options = options || {};
     this.bindingKey = this.options.bindingKey || '_validatorjsConstraint';
   };
@@ -553,7 +553,7 @@ var Validator = ( function ( ) {
       this.validate = function ( collection, group ) {
         var result, validator = new Validator(), count = 0, failures = {}, groups = this.groups.length ? this.groups : group;
         if ( !_isArray( collection ) )
-          throw new Violation( this, array, { value: Validator.errorCode.must_be_an_array } );
+          throw new Violation( this, collection, { value: Validator.errorCode.must_be_an_array } );
         for ( var i = 0; i < collection.length; i++ ) {
           result = this.constraint ?
             validator.validate( collection[ i ], this.constraint, groups ) :
@@ -922,17 +922,37 @@ var Validator = ( function ( ) {
       delete this.validators[name];
       return this;
     },
-    getErrorMessage: function (constraint) {
-      var message;
+    getErrorMessage: function (constraint, fieldInstance ) {
+      var error_parameters = {}, message;
+      // Generate some default error parameters based on field instance attributes
+      if ( typeof fieldInstance != "undefined" ) {
+        error_parameters = ParsleyUtils.attr(fieldInstance.$element, fieldInstance.options.namespace);
+      }
+      
+      if ( 'undefined' == typeof error_parameters.label ) {
+        error_parameters.label = this.catalog[this.locale].defaultLabel;
+      }
       // Type constraints are a bit different, we have to match their requirements too to find right error message
-      if ('type' === constraint.name)
+      if ('type' === constraint.name) 
         message = this.catalog[this.locale][constraint.name][constraint.requirements];
-      else
+      else 
         message = this.formatMessage(this.catalog[this.locale][constraint.name], constraint.requirements);
-      return '' !== message ? message : this.catalog[this.locale].defaultMessage;
+      message = ('' !== message ? message : this.catalog[this.locale].defaultMessage);
+    
+      return this.formatMessage(message, error_parameters);
     },
     // Kind of light `sprintf()` implementation
     formatMessage: function (string, parameters) {
+      if ( typeof string != "string" || !string) {
+        return '';
+      }
+      // Add moustache style templating {{field.label}} = parameters.field_name
+      string = string.replace(/{{([a-zA-Z0-9_-]+)}}/gi, function(a,b){
+        if ( typeof parameters[b] != "undefined" )
+          return parameters[b];
+        else
+          return a;
+      });
       if ('object' === typeof parameters) {
         for (var i in parameters)
           string = this.formatMessage(string, parameters[i]);
@@ -1187,7 +1207,7 @@ var Validator = ( function ( ) {
       var customConstraintErrorMessage = constraint.name + 'Message';
       if ('undefined' !== typeof fieldInstance.options[customConstraintErrorMessage])
         return window.ParsleyValidator.formatMessage(fieldInstance.options[customConstraintErrorMessage], constraint.requirements);
-      return window.ParsleyValidator.getErrorMessage(constraint);
+      return window.ParsleyValidator.getErrorMessage(constraint, fieldInstance);
     },
     _diff: function (newResult, oldResult, deep) {
       var
@@ -1837,28 +1857,29 @@ window.ParsleyConfig = window.ParsleyConfig || {};
 window.ParsleyConfig.i18n = window.ParsleyConfig.i18n || {};
 // Define then the messages
 window.ParsleyConfig.i18n.en = $.extend(window.ParsleyConfig.i18n.en || {}, {
-  defaultMessage: "This value seems to be invalid.",
+  defaultLabel:   "This value",
+  defaultMessage: "{{label}} seems to be invalid.",
   type: {
-    email:        "This value should be a valid email.",
-    url:          "This value should be a valid url.",
-    number:       "This value should be a valid number.",
-    integer:      "This value should be a valid integer.",
-    digits:       "This value should be digits.",
-    alphanum:     "This value should be alphanumeric."
+    email:        "{{label}} should be a valid email.",
+    url:          "{{label}} should be a valid url.",
+    number:       "{{label}} should be a valid number.",
+    integer:      "{{label}} should be a valid integer.",
+    digits:       "{{label}} should be digits.",
+    alphanum:     "{{label}} should be alphanumeric."
   },
-  notblank:       "This value should not be blank.",
-  required:       "This value is required.",
-  pattern:        "This value seems to be invalid.",
-  min:            "This value should be greater than or equal to %s.",
-  max:            "This value should be lower than or equal to %s.",
-  range:          "This value should be between %s and %s.",
-  minlength:      "This value is too short. It should have %s characters or more.",
-  maxlength:      "This value is too long. It should have %s characters or fewer.",
-  length:         "This value length is invalid. It should be between %s and %s characters long.",
+  notblank:       "{{label}} should not be blank.",
+  required:       "{{label}} is required.",
+  pattern:        "{{label}} seems to be invalid.",
+  min:            "{{label}} should be greater than or equal to %s.",
+  max:            "{{label}} should be lower than or equal to %s.",
+  range:          "{{label}} should be between %s and %s.",
+  minlength:      "{{label}} is too short. It should have %s characters or more.",
+  maxlength:      "{{label}} is too long. It should have %s characters or fewer.",
+  length:         "{{label}} length is invalid. It should be between %s and %s characters long.",
   mincheck:       "You must select at least %s choices.",
   maxcheck:       "You must select %s choices or fewer.",
   check:          "You must select between %s and %s choices.",
-  equalto:        "This value should be the same."
+  equalto:        "{{label}} should be the same."
 });
 // If file is loaded after Parsley main file, auto-load locale
 if ('undefined' !== typeof window.ParsleyValidator)
